@@ -1,37 +1,41 @@
 <?php
 namespace Session;
 class File {
-	private $directory;
-
 	public function read($session_id) {
-		$file = DIR_SESSION . '/sess_' . basename($session_id);
+		$file = DIR_SESSION . 'sess_' . basename($session_id);
 
 		if (is_file($file)) {
-			$handle = fopen($file, 'r');
+			$size = filesize($file);
 
-			flock($handle, LOCK_SH);
+			if ($size) {
+				$handle = fopen($file, 'r');
 
-			$data = fread($handle, filesize($file));
+				flock($handle, LOCK_SH);
 
-			flock($handle, LOCK_UN);
+				$data = fread($handle, $size);
 
-			fclose($handle);
+				flock($handle, LOCK_UN);
 
-			return unserialize($data);
-		} else {
-			return array();
+				fclose($handle);
+
+				return json_decode($data, true);
+			} else {
+				return array();
+			}
 		}
+
+		return array();
 	}
 
 	public function write($session_id, $data) {
-		$file = DIR_SESSION . '/sess_' . basename($session_id);
+		$file = DIR_SESSION . 'sess_' . basename($session_id);
 
-		$handle = fopen($file, 'w');
+		$handle = fopen($file, 'c');
 
 		flock($handle, LOCK_EX);
 
-		fwrite($handle, serialize($data));
-
+		fwrite($handle, json_encode($data));
+		ftruncate($handle, ftell($handle));
 		fflush($handle);
 
 		flock($handle, LOCK_UN);
@@ -42,7 +46,7 @@ class File {
 	}
 
 	public function destroy($session_id) {
-		$file = DIR_SESSION . '/sess_' . basename($session_id);
+		$file = DIR_SESSION . 'sess_' . basename($session_id);
 
 		if (is_file($file)) {
 			unlink($file);
@@ -50,8 +54,10 @@ class File {
 	}
 
 	public function __destruct() {
-		if (ini_get('session.gc_divisor')) {
-			$gc_divisor = ini_get('session.gc_divisor');
+		$gc_divisor = (int)ini_get('session.gc_divisor');
+
+		if ($gc_divisor) {
+			$gc_divisor = $gc_divisor;
 		} else {
 			$gc_divisor = 1;
 		}
@@ -62,10 +68,10 @@ class File {
 			$gc_probability = 1;
 		}
 
-		if ((rand() % $gc_divisor) < $gc_probability) {
+		if (mt_rand() / mt_getrandmax() > $gc_probability / $gc_divisor) {
 			$expire = time() - ini_get('session.gc_maxlifetime');
 
-			$files = glob(DIR_SESSION . '/sess_*');
+			$files = glob(DIR_SESSION . 'sess_*');
 
 			foreach ($files as $file) {
 				if (filemtime($file) < $expire) {

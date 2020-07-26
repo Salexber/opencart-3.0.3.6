@@ -14,7 +14,7 @@ class ControllerExtensionThemeDefault extends Controller {
 
 			$this->session->data['success'] = $this->language->get('text_success');
 
-			$this->response->redirect($this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=theme', true));
+			$this->response->redirect($this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=theme'));
 		}
 
 		if (isset($this->error['warning'])) {
@@ -24,9 +24,9 @@ class ControllerExtensionThemeDefault extends Controller {
 		}
 
 		if (isset($this->error['product_limit'])) {
-			$data['error_product_limit'] = $this->error['product_limit'];
+			$data['error_pagination'] = $this->error['product_limit'];
 		} else {
-			$data['error_product_limit'] = '';
+			$data['error_pagination'] = '';
 		}
 
 		if (isset($this->error['product_description_length'])) {
@@ -99,22 +99,22 @@ class ControllerExtensionThemeDefault extends Controller {
 
 		$data['breadcrumbs'][] = array(
 			'text' => $this->language->get('text_home'),
-			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'], true)
+			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'])
 		);
 
 		$data['breadcrumbs'][] = array(
 			'text' => $this->language->get('text_extension'),
-			'href' => $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=theme', true)
+			'href' => $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=theme')
 		);
 
 		$data['breadcrumbs'][] = array(
 			'text' => $this->language->get('heading_title'),
-			'href' => $this->url->link('extension/theme/default', 'user_token=' . $this->session->data['user_token'] . '&store_id=' . $this->request->get['store_id'], true)
+			'href' => $this->url->link('extension/theme/default', 'user_token=' . $this->session->data['user_token'] . '&store_id=' . $this->request->get['store_id'])
 		);
 
-		$data['action'] = $this->url->link('extension/theme/default', 'user_token=' . $this->session->data['user_token'] . '&store_id=' . $this->request->get['store_id'], true);
+		$data['action'] = $this->url->link('extension/theme/default', 'user_token=' . $this->session->data['user_token'] . '&store_id=' . $this->request->get['store_id']);
 
-		$data['cancel'] = $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=theme', true);
+		$data['cancel'] = $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=theme');
 
 		if (isset($this->request->get['store_id']) && ($this->request->server['REQUEST_METHOD'] != 'POST')) {
 			$setting_info = $this->model_setting_setting->getSetting('theme_default', $this->request->get['store_id']);
@@ -136,12 +136,12 @@ class ControllerExtensionThemeDefault extends Controller {
 			$data['directories'][] = basename($directory);
 		}
 
-		if (isset($this->request->post['theme_default_product_limit'])) {
-			$data['theme_default_product_limit'] = $this->request->post['theme_default_product_limit'];
-		} elseif (isset($setting_info['theme_default_product_limit'])) {
-			$data['theme_default_product_limit'] = $setting_info['theme_default_product_limit'];
+		if (isset($this->request->post['theme_default_pagination'])) {
+			$data['theme_default_pagination'] = $this->request->post['theme_default_pagination'];
+		} elseif (isset($setting_info['theme_default_pagination'])) {
+			$data['theme_default_pagination'] = $setting_info['theme_default_pagination'];
 		} else {
-			$data['theme_default_product_limit'] = 15;
+			$data['theme_default_pagination'] = 15;
 		}		
 		
 		if (isset($this->request->post['theme_default_status'])) {
@@ -332,7 +332,7 @@ class ControllerExtensionThemeDefault extends Controller {
 			$this->error['warning'] = $this->language->get('error_permission');
 		}
 
-		if (!$this->request->post['theme_default_product_limit']) {
+		if (!$this->request->post['theme_default_pagination']) {
 			$this->error['product_limit'] = $this->language->get('error_limit');
 		}
 

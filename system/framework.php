@@ -4,8 +4,10 @@ $registry = new Registry();
 
 // Config
 $config = new Config();
+
+// Load the default config
 $config->load('default');
-$config->load($application_config);
+$config->load($application);
 $registry->set('config', $config);
 
 // Log
@@ -49,8 +51,18 @@ set_error_handler(function($code, $message, $file, $line) use($log, $config) {
 	return true;
 });
 
+set_exception_handler(function($e) use ($log, $config) {
+	if ($config->get('error_display')) {
+		echo '<b>' . get_class($e) . '</b>: ' . $e->getMessage() . ' in <b>' . $e->getFile() . '</b> on line <b>' . $e->getLine() . '</b>';
+	}
+
+	if ($config->get('error_log')) {
+		$log->write(get_class($e) . ':  ' . $e->getMessage() . ' in ' . $e->getFile() . ' on line ' . $e->getLine());
+	}
+});
+
 // Event
-$event = new Event($registry);
+$event = new \Event($registry);
 $registry->set('event', $event);
 
 // Event Register
@@ -67,17 +79,24 @@ $loader = new Loader($registry);
 $registry->set('load', $loader);
 
 // Request
-$registry->set('request', new Request());
+$request = new Request();
+$registry->set('request', $request);
 
 // Response
 $response = new Response();
-$response->addHeader('Content-Type: text/html; charset=utf-8');
-$response->setCompression($config->get('config_compression'));
+foreach ($config->get('response_header') as $header) {
+    $response->addHeader($header);
+}
+$response->setCompression($config->get('response_compression'));
 $registry->set('response', $response);
 
 // Database
 if ($config->get('db_autostart')) {
-	$registry->set('db', new DB($config->get('db_engine'), $config->get('db_hostname'), $config->get('db_username'), $config->get('db_password'), $config->get('db_database'), $config->get('db_port')));
+	$db = new DB($config->get('db_engine'), $config->get('db_hostname'), $config->get('db_username'), $config->get('db_password'), $config->get('db_database'), $config->get('db_port'));
+	$registry->set('db', $db);
+
+	// Sync PHP and DB time zones
+	$db->query("SET time_zone = '" . $db->escape(date('P')) . "'");
 }
 
 // Session
@@ -105,20 +124,27 @@ if ($config->get('session_autostart')) {
 
 	$session->start($session_id);
 
-	setcookie($config->get('session_name'), $session->getId(), ini_get('session.cookie_lifetime'), ini_get('session.cookie_path'), ini_get('session.cookie_domain'));
+	// Require higher security for session cookies
+	$option = array(
+		'max-age'  => time() + $config->get('session_expire'),
+		'path'     => !empty($_SERVER['PHP_SELF']) ? dirname($_SERVER['PHP_SELF']) . '/' : '',
+		'domain'   => $_SERVER['HTTP_HOST'],
+		'secure'   => $_SERVER['HTTPS'],
+		'httponly' => false,
+		'SameSite' => 'strict'
+	);
+
+	oc_setcookie($config->get('session_name'), $session->getId(), $option);
 }
 
 // Cache
 $registry->set('cache', new Cache($config->get('cache_engine'), $config->get('cache_expire')));
 
 // Url
-if ($config->get('url_autostart')) {
-	$registry->set('url', new Url($config->get('site_url'), $config->get('site_ssl')));
-}
+$registry->set('url', new Url($config->get('site_url')));
 
 // Language
-$language = new Language($config->get('language_directory'));
-$registry->set('language', $language);
+$registry->set('language', new Language($config->get('language_directory')));
 
 // Document
 $registry->set('document', new Document());
@@ -134,6 +160,13 @@ if ($config->has('config_autoload')) {
 if ($config->has('language_autoload')) {
 	foreach ($config->get('language_autoload') as $value) {
 		$loader->language($value);
+	}
+}
+
+// Helper Autoload
+if ($config->has('helper_autoload')) {
+	foreach ($config->get('helper_autoload') as $value) {
+		$loader->model($value);
 	}
 }
 

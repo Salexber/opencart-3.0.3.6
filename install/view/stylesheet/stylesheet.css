@@ -177,14 +177,12 @@ a.button, input.button {
     box-shadow: 1px 2px 2px #DDDDDD;
     margin-bottom: 2px;
 }
-
 .buttons {
     border: 1px solid #DBDBDB;
     padding: 6px;
     margin-bottom: 20px;
     overflow: auto;
 }
-
 .btn {
     padding: 10px 25px;
     text-transform: uppercase;
@@ -196,7 +194,6 @@ a.button, input.button {
     -o-transition: all 0.3s ease-out;
     transition: all 0.3s ease-out;
 }
-
 .btn-default:visited,
 .btn-default {
     border: none;
@@ -326,7 +323,7 @@ a.button, input.button {
 
 
 
-/*Support*/
+/* Support */
 .support {
     padding: 0 50px 50px 50px;
     background: #173642;
@@ -366,6 +363,7 @@ a.button, input.button {
 .support a:hover {
     color: #fff;
 }
+
 
 /* Terms */
 .terms {
