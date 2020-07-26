@@ -95,7 +95,7 @@ class ControllerApiOrder extends Controller {
 
 			if (!$json) {
 				$json['success'] = $this->language->get('text_success');
-
+				
 				$order_data = array();
 
 				// Store Details
@@ -205,7 +205,6 @@ class ControllerApiOrder extends Controller {
 
 					$order_data['products'][] = array(
 						'product_id' => $product['product_id'],
-						'master_id'  => $product['master_id'],
 						'name'       => $product['name'],
 						'model'      => $product['model'],
 						'option'     => $option_data,
@@ -245,6 +244,13 @@ class ControllerApiOrder extends Controller {
 				$taxes = $this->cart->getTaxes();
 				$total = 0;
 
+				// Because __call can not keep var references so we put them into an array.
+				$total_data = array(
+					'totals' => &$totals,
+					'taxes'  => &$taxes,
+					'total'  => &$total
+				);
+			
 				$sort_order = array();
 
 				$results = $this->model_setting_extension->getExtensions('total');
@@ -258,25 +264,19 @@ class ControllerApiOrder extends Controller {
 				foreach ($results as $result) {
 					if ($this->config->get('total_' . $result['code'] . '_status')) {
 						$this->load->model('extension/total/' . $result['code']);
-
-						// __call can not pass-by-reference so we get PHP to call it as an anonymous function.
-						($this->{'model_extension_total_' . $result['code']}->getTotal)($totals, $taxes, $total);
+						
+						// We have to put the totals in an array so that they pass by reference.
+						$this->{'model_extension_total_' . $result['code']}->getTotal($total_data);
 					}
 				}
 
 				$sort_order = array();
 
-				foreach ($totals as $key => $value) {
+				foreach ($total_data['totals'] as $key => $value) {
 					$sort_order[$key] = $value['sort_order'];
 				}
 
-				array_multisort($sort_order, SORT_ASC, $totals);
-
-				$total_data = array(
-					'totals' => $totals,
-					'taxes'  => $taxes,
-					'total'  => $total
-				);
+				array_multisort($sort_order, SORT_ASC, $total_data['totals']);
 
 				$order_data = array_merge($order_data, $total_data);
 
@@ -286,23 +286,30 @@ class ControllerApiOrder extends Controller {
 					$order_data['comment'] = '';
 				}
 
-				$order_data['tracking'] = '';
-				$order_data['affiliate_id'] = 0;
-				$order_data['commission'] = 0;
-				$order_data['marketing_id'] = 0;
-
-				if (isset($this->request->post['affiliate_id']) && $this->config->get('config_affiliate_status')) {
+				if (isset($this->request->post['affiliate_id'])) {
 					$subtotal = $this->cart->getSubTotal();
 
 					// Affiliate
-					$this->load->model('account/affiliate');
+					$this->load->model('account/customer');
 
-					$affiliate_info = $this->model_account_affiliate->getAffiliate($this->request->post['affiliate_id']);
+					$affiliate_info = $this->model_account_customer->getAffiliate($this->request->post['affiliate_id']);
 
 					if ($affiliate_info) {
 						$order_data['affiliate_id'] = $affiliate_info['customer_id'];
 						$order_data['commission'] = ($subtotal / 100) * $affiliate_info['commission'];
+					} else {
+						$order_data['affiliate_id'] = 0;
+						$order_data['commission'] = 0;
 					}
+
+					// Marketing
+					$order_data['marketing_id'] = 0;
+					$order_data['tracking'] = '';
+				} else {
+					$order_data['affiliate_id'] = 0;
+					$order_data['commission'] = 0;
+					$order_data['marketing_id'] = 0;
+					$order_data['tracking'] = '';
 				}
 
 				$order_data['language_id'] = $this->config->get('config_language_id');
@@ -342,8 +349,8 @@ class ControllerApiOrder extends Controller {
 					$order_status_id = $this->config->get('config_order_status_id');
 				}
 
-				$this->model_checkout_order->addHistory($json['order_id'], $order_status_id);
-
+				$this->model_checkout_order->addOrderHistory($json['order_id'], $order_status_id);
+				
 				// clear cart since the order has already been successfully stored.
 				$this->cart->clear();
 			}
@@ -458,7 +465,7 @@ class ControllerApiOrder extends Controller {
 
 				if (!$json) {
 					$json['success'] = $this->language->get('text_success');
-
+					
 					$order_data = array();
 
 					// Store Details
@@ -568,7 +575,6 @@ class ControllerApiOrder extends Controller {
 
 						$order_data['products'][] = array(
 							'product_id' => $product['product_id'],
-							'master_id'  => $product['master_id'],
 							'name'       => $product['name'],
 							'model'      => $product['model'],
 							'option'     => $option_data,
@@ -607,7 +613,14 @@ class ControllerApiOrder extends Controller {
 					$totals = array();
 					$taxes = $this->cart->getTaxes();
 					$total = 0;
-
+					
+					// Because __call can not keep var references so we put them into an array. 
+					$total_data = array(
+						'totals' => &$totals,
+						'taxes'  => &$taxes,
+						'total'  => &$total
+					);
+			
 					$sort_order = array();
 
 					$results = $this->model_setting_extension->getExtensions('total');
@@ -621,25 +634,19 @@ class ControllerApiOrder extends Controller {
 					foreach ($results as $result) {
 						if ($this->config->get('total_' . $result['code'] . '_status')) {
 							$this->load->model('extension/total/' . $result['code']);
-
-							// __call can not pass-by-reference so we get PHP to call it as an anonymous function.
-							($this->{'model_extension_total_' . $result['code']}->getTotal)($totals, $taxes, $total);
+							
+							// We have to put the totals in an array so that they pass by reference.
+							$this->{'model_extension_total_' . $result['code']}->getTotal($total_data);
 						}
 					}
 
 					$sort_order = array();
 
-					foreach ($totals as $key => $value) {
+					foreach ($total_data['totals'] as $key => $value) {
 						$sort_order[$key] = $value['sort_order'];
 					}
 
-					array_multisort($sort_order, SORT_ASC, $totals);
-
-					$total_data = array(
-						'totals' => $totals,
-						'taxes'  => $taxes,
-						'total'  => $total
-					);
+					array_multisort($sort_order, SORT_ASC, $total_data['totals']);
 
 					$order_data = array_merge($order_data, $total_data);
 
@@ -649,21 +656,24 @@ class ControllerApiOrder extends Controller {
 						$order_data['comment'] = '';
 					}
 
-					$order_data['affiliate_id'] = 0;
-					$order_data['commission'] = 0;
-
-					if (isset($this->request->post['affiliate_id']) && $this->config->get('config_affiliate_status')) {
+					if (isset($this->request->post['affiliate_id'])) {
 						$subtotal = $this->cart->getSubTotal();
 
 						// Affiliate
-						$this->load->model('account/affiliate');
+						$this->load->model('account/customer');
 
-						$affiliate_info = $this->model_account_affiliate->getAffiliate($this->request->post['affiliate_id']);
+						$affiliate_info = $this->model_account_customer->getAffiliate($this->request->post['affiliate_id']);
 
 						if ($affiliate_info) {
 							$order_data['affiliate_id'] = $affiliate_info['customer_id'];
 							$order_data['commission'] = ($subtotal / 100) * $affiliate_info['commission'];
+						} else {
+							$order_data['affiliate_id'] = 0;
+							$order_data['commission'] = 0;
 						}
+					} else {
+						$order_data['affiliate_id'] = 0;
+						$order_data['commission'] = 0;
 					}
 
 					$this->model_checkout_order->editOrder($order_id, $order_data);
@@ -674,8 +684,8 @@ class ControllerApiOrder extends Controller {
 					} else {
 						$order_status_id = $this->config->get('config_order_status_id');
 					}
-
-					$this->model_checkout_order->addHistory($order_id, $order_status_id);
+					
+					$this->model_checkout_order->addOrderHistory($order_id, $order_status_id);
 				}
 			} else {
 				$json['error'] = $this->language->get('error_not_found');
@@ -712,7 +722,7 @@ class ControllerApiOrder extends Controller {
 				$json['error'] = $this->language->get('error_not_found');
 			}
 		}
-
+		
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
 	}
@@ -781,7 +791,7 @@ class ControllerApiOrder extends Controller {
 			$order_info = $this->model_checkout_order->getOrder($order_id);
 
 			if ($order_info) {
-				$this->model_checkout_order->addHistory($order_id, $this->request->post['order_status_id'], $this->request->post['comment'], $this->request->post['notify'], $this->request->post['override']);
+				$this->model_checkout_order->addOrderHistory($order_id, $this->request->post['order_status_id'], $this->request->post['comment'], $this->request->post['notify'], $this->request->post['override']);
 
 				$json['success'] = $this->language->get('text_success');
 			} else {

@@ -1,12 +1,11 @@
 <?php
 class ControllerMarketingContact extends Controller {
+	private $error = array();
+
 	public function index() {
 		$this->load->language('marketing/contact');
 
 		$this->document->setTitle($this->language->get('heading_title'));
-
-		$this->document->addScript('view/javascript/ckeditor/ckeditor.js');
-		$this->document->addScript('view/javascript/ckeditor/adapters/jquery.js');
 
 		$data['user_token'] = $this->session->data['user_token'];
 
@@ -14,15 +13,15 @@ class ControllerMarketingContact extends Controller {
 
 		$data['breadcrumbs'][] = array(
 			'text' => $this->language->get('text_home'),
-			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'])
+			'href' => $this->url->link('common/dashboard', 'user_token=' . $this->session->data['user_token'], true)
 		);
 
 		$data['breadcrumbs'][] = array(
 			'text' => $this->language->get('heading_title'),
-			'href' => $this->url->link('marketing/contact', 'user_token=' . $this->session->data['user_token'])
+			'href' => $this->url->link('marketing/contact', 'user_token=' . $this->session->data['user_token'], true)
 		);
 
-		$data['cancel'] = $this->url->link('marketing/contact', 'user_token=' . $this->session->data['user_token']);
+		$data['cancel'] = $this->url->link('marketing/contact', 'user_token=' . $this->session->data['user_token'], true);
 
 		$this->load->model('setting/store');
 
@@ -135,20 +134,13 @@ class ControllerMarketingContact extends Controller {
 						break;
 					case 'customer':
 						if (!empty($this->request->post['customer'])) {
-							$start = ($page - 1) * 10;
+							foreach ($this->request->post['customer'] as $customer_id) {
+								$customer_info = $this->model_customer_customer->getCustomer($customer_id);
 
-							for ($i = 0; $i < 10; $i++) {
-								if (isset($this->request->post['customer'][($start + $i)])) {
-									$customer_id = $this->request->post['customer'][($start + $i)];
-									$customer_info = $this->model_customer_customer->getCustomer($customer_id);
-
-									if ($customer_info) {
-										$emails[] = $customer_info['email'];
-									}
+								if ($customer_info) {
+									$emails[] = $customer_info['email'];
 								}
 							}
-
-							$email_total = count($this->request->post['customer']);
 						}
 						break;
 					case 'affiliate_all':
@@ -168,21 +160,14 @@ class ControllerMarketingContact extends Controller {
 						break;
 					case 'affiliate':
 						if (!empty($this->request->post['affiliate'])) {
-							$start = ($page - 1) * 10;
+							foreach ($this->request->post['affiliate'] as $affiliate_id) {
+								$affiliate_info = $this->model_customer_customer->getCustomer($affiliate_id);
 
-							for ($i = 0; $i < 10; $i++) {
-								if (isset($this->request->post['affiliate'][($start + $i)])) {
-									$affiliate_id = $this->request->post['affiliate'][($start + $i)];
-									$affiliate_info = $this->model_customer_customer->getCustomer($affiliate_id);
-
-									if ($affiliate_info) {
-										$emails[] = $affiliate_info['email'];
-									}
+								if ($affiliate_info) {
+									$emails[] = $affiliate_info['email'];
 								}
 							}
 						}
-
-						$email_total = count($this->request->post['affiliate']);
 						break;
 					case 'product':
 						if (isset($this->request->post['product'])) {
@@ -206,7 +191,7 @@ class ControllerMarketingContact extends Controller {
 					$json['success'] = sprintf($this->language->get('text_sent'), $start, $email_total);
 
 					if ($end < $email_total) {
-						$json['next'] = str_replace('&amp;', '&', $this->url->link('marketing/contact/send', 'user_token=' . $this->session->data['user_token'] . '&page=' . ($page + 1)));
+						$json['next'] = str_replace('&amp;', '&', $this->url->link('marketing/contact/send', 'user_token=' . $this->session->data['user_token'] . '&page=' . ($page + 1), true));
 					} else {
 						$json['next'] = '';
 					}
@@ -237,6 +222,8 @@ class ControllerMarketingContact extends Controller {
 							$mail->send();
 						}
 					}
+				} else {
+					$json['error']['email'] = $this->language->get('error_email');
 				}
 			}
 		}
