@@ -21,6 +21,7 @@
                 "shasum": ""
             },
             "require": {
+                "ext-gd": "*",
                 "ext-json": "*",
                 "ext-pcre": "*",
                 "ext-simplexml": "*",
