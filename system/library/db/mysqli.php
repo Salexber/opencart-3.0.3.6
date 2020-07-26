@@ -9,8 +9,7 @@ final class MySQLi {
 		if ($this->connection->connect_error) {
 			throw new \Exception('Error: ' . $this->connection->error . '<br />Error No: ' . $this->connection->errno);
 		}
-
-		$this->connection->set_charset("");
+		/*$this->connection->set_charset("utf8");*/
 		$this->connection->query("SET SQL_MODE = ''");
 	}
 
