@@ -21,7 +21,6 @@
                 "shasum": ""
             },
             "require": {
-                "ext-gd": "*",
                 "ext-curl": "*",
                 "ext-dom": "*",
                 "ext-hash": "*",
